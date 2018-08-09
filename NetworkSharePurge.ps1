@@ -1,4 +1,17 @@
-﻿Import-Module ActiveDirectory
+﻿#Network Share Purge Script#
+#Version 1.0#
+<#
+.SYNOPSIS
+Remove Network Shares from Server8
+
+.DESCRIPTION
+Attempts to compare AD and Network share names and delete those not in Active Dirctory
+
+.NOTES
+Used to remove shares from server after comparing to AD, works at a very high level only use if you KNOW you will be deleting users that are potentially spelled wrong.
+#>
+
+Import-Module ActiveDirectory
  
 $directories = get-childitem \\server8\Students$\*
  

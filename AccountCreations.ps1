@@ -1,4 +1,17 @@
 #Automated Student Account Creation Script#
+#Version 1.0#
+<#
+.SYNOPSIS
+Automated Student Account Creation
+
+.DESCRIPTION
+Takes Powershell SIS export and attempts to create account automatically for students
+
+.NOTES
+Be sure to read comment sections on what areas do, this is for teachers there is another speically for students.
+
+#>
+
 # Globals
 $DomainEmail="@springfield-schools.org"
 $DomainName="DC=SLSD,DC=local"

@@ -1,3 +1,17 @@
+#Automated Teacher Account Creation Script#
+#Version 1.0#
+<#
+.SYNOPSIS
+Automated Teacher Account Creation
+
+.DESCRIPTION
+Takes Powershell SIS export and attempts to create account automatically for teachers
+
+.NOTES
+Be sure to read comment sections on what areas do, this is for teachers there is another speically for teachers.
+
+#>
+
 # Globals
 $DomainEmail="@springfield-schools.org"
 $DomainName="DC=SLSD,DC=local"
