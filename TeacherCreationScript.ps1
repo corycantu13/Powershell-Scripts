@@ -17,7 +17,7 @@ $DomainEmail="@springfield-schools.org"
 $DomainName="DC=SLSD,DC=local"
 $NTDomain="@SLSD.local"
 
-$InFile = "C:\Scripts\Accounts\students.csv"
+$InFile = "C:\Scripts\Accounts\Teachers.csv"
 $LogFile = "C:\Scripts\Accounts\logfile.csv"
 
 
@@ -33,8 +33,8 @@ $school = @{
         }
 
 #############################################
-# Function : CreateStudentAccount           
-# Notes :  	Check if student account exists.
+# Function : CreateTeacherAccount           
+# Notes :  	Check if teacher account exists.
 #			If it doesnt, create it.        
 #############################################
 function CreateTeacherAccount {
@@ -46,14 +46,14 @@ function CreateTeacherAccount {
 	$UPN = $SamName + $NTDomain
 
 	# Look for user with same SAMAccountName
-	$CheckExist = try {Get-ADuser -LDAPFilter "(EmployeeID=$($acct.StateID))" -SearchBase "OU=Students,OU=Users and Computers,$DomainName"} catch {$null}
-	$DN = Get-ADuser -LDAPFilter "(EmployeeID=$($acct.StateID))" -SearchBase "OU=Students,OU=Users and Computers,$DomainName" | Select-Object -Expand DistinguishedName
-	$SN = Get-ADuser -LDAPFilter "(EmployeeID=$($acct.StateID))" -SearchBase "OU=Students,OU=Users and Computers,$DomainName" | Select-Object -Expand SamAccountName
+	$CheckExist = try {Get-ADuser -LDAPFilter "(EmployeeID=$($acct.teacherID))" -SearchBase "OU=Teachers,OU=Users and Computers,$DomainName"} catch {$null}
+	$DN = Get-ADuser -LDAPFilter "(EmployeeID=$($acct.TeacherID))" -SearchBase "OU=Teachers,OU=Users and Computers,$DomainName" | Select-Object -Expand DistinguishedName
+	$SN = Get-ADuser -LDAPFilter "(EmployeeID=$($acct.TeacherID))" -SearchBase "OU=Teachers,OU=Users and Computers,$DomainName" | Select-Object -Expand SamAccountName
 	
 	
 	if(($CheckExist -ne $null) -and (($CheckExist | Select-Object -Expand SamAccountName) -eq $SamName)){
 		# User Already Exists, Set a meaningful return Value
-		$CreateStudentAccount = "Correct"
+		$CreateTeacherAccount = "Correct"
 	} elseif (($CheckExist -ne $null) -and ($SN -ne $SamName)) {
 		#Rename-ADObject -Identity $DN -NewName $SamName
 		
@@ -61,13 +61,11 @@ function CreateTeacherAccount {
 									  -EmailAddress ($UserEmail) `
 									  -Givenname $acct.FirstName `
 									  -Surname $acct.LastName `
-									  -Description "Grade $($acct.Grade) at $($school.Get_Item($acct.Schoolid))" `
+									  -Description "Teacher at $($school.Get_Item($acct.Schoolid))" `
 									  -Enabled $true `
-									  -Office ($UserPass) `
-									  -Department $acct.Grade `
-									  -Company $acct.Schoolid `
+									  -Office $acct.Schoolid `
 
-		$CreateStudentAccount = "Renamed"
+		$CreateTeacherAccount = "Renamed"
 	} Else {
 	
 		# Create the User's AD Account
@@ -78,30 +76,28 @@ function CreateTeacherAccount {
                             -EmailAddress ($UserEmail) `
 							-UserPrincipalName ($UPN) `
 							-AccountPassword ($defpassword) `
-							-EmployeeID ($acct.StateID) `
-							-Office ($UserPass) `
+							-EmployeeID ($acct.TeacherID) `
+							-Office $acct.Schoolid `
 							-givenname $acct.FirstName `
 							-surname $acct.LastName `
-							-Description "Grade $($acct.Grade) at $($school.Get_Item($acct.Schoolid))" `
+							-Description "Teacher at $($school.Get_Item($acct.Schoolid))" `
 							-Enabled $true `
 							-ChangePasswordAtLogon $false `
-							-CannotChangePassword $true `
-							-Title "Student" `
-							-Department $acct.Grade `
+							-Title "Teacher" `
 							-Company $($school.Get_Item($acct.Schoolid)) `
-							-Path "OU=$($strGradYear),OU=Students,OU=Users and Computers,$DomainName"
-				 $CreateStudentAccount = "Created"
+							-Path "OU=Teachers,OU=Users and Computers,$DomainName"
+				 $CreateTeacherAccount = "Created"
 			}
 		catch [system.Object] {
-			$CreateStudentAccount = "Error"
+			$CreateTeacherAccount = "Error"
 			
 		}
 	}
 
-	$CreateStudentAccount
+	$CreateTeacherAccount
 
 }
-# End function CreateStudentAccount
+# End function CreateTeacherAccount
 # -------------------------------------------
 
 #############################################
@@ -115,7 +111,7 @@ function MoveToOU {
 	$UserLoc = ((Get-ADUser -Identity $SamName -Properties DistinguishedName).DistinguishedName -split ",",2)[1]
 	$UserDN = (Get-ADUser -Identity $SamName).DistinguishedName
 	
-	$TargetOU = "OU=$($strGradYear),OU=Students,OU=Users and Computers,$DomainName"
+	$TargetOU = "OU=Teachers,OU=Users and Computers,$DomainName"
 	if($UserLoc -eq $TargetOU){
 		$MoveToOU = "Correct"
 	} else {
@@ -123,7 +119,7 @@ function MoveToOU {
 		$MoveToOU = "Moved"
 		Set-ADUser  -Identity $SamName `
 					-Company $($school.Get_Item($acct.Schoolid)) `
-					-Description "Grade $($acct.Grade) at $($school.Get_Item($acct.Schoolid))" `
+					-Description "Teacher at $($school.Get_Item($acct.Schoolid))" `
 					-Enabled $true
 	}
 	$MoveToOU
@@ -146,36 +142,21 @@ $ObjIdx = 0
 
 foreach ($acct in $AcctList) {
 
-#Get First Initial
-$init = $acct.FirstName.Substring(0,1)
 #Strip Spaces out of last name
 $lname = $acct.LastName -replace '\s',''
-#Get first 2 of school id
-$id = $acct.Stateid.Substring(0,2)
-#Set Grad year. ***THIS MUST BE ADJUSTED EACH SCHOOL YEAR!!!*** It must be the grad year of the current senior class (2019 for the 2018/2019 school year)
-$curryr = 2019
-###
-# Set other variables
-#find the number to add to the current grad year
-$gradoffset = 12-$acct.Grade
-#Set graduation year
-$gradyear = $curryr + $gradoffset
-#Cast Grad Year to String for use in other parts of the Script
-$strGradYear = [string]$gradyear
-####
 
 	# Create username
 	$UserName = $acct.FirstName+" "+$acct.LastName
-	$SamName = $id + $init + $lname
+	$SamName = $acct.FirstName + $lname
 	$Obj = New-Object System.object
 	$Obj | Add-Member -Type NoteProperty -name UserName -value $UserName
 	
 	# Create password
-	$UserPass = "{0:D8}" -f [int]$acct.StateID
+	$UserPass = $acct.LastName
 	$Obj | Add-Member -Type NoteProperty -name UserPass -value $UserPass
 	
 	# Create users
-	$CreatedStatus=CreateTeacherAccount $UserName $UserPass #$SamName
+	$CreatedStatus=CreateTeacherAccount $UserName $UserPass $SamName
 	$Obj | Add-Member -Type NoteProperty -name CreatedStatus -value $CreatedStatus
 	
 	# Move to OU
@@ -189,10 +170,10 @@ $strGradYear = [string]$gradyear
 $ObjArr | Export-CSV $LogFile -notype
 
 #Find accounts that are 1. Not in CSV and 2. Have EmployeeID and disable them
-$IDS = Import-CSV -Path "C:\Scripts\Accounts\students.csv" | Select-object -ExpandProperty StateID
-Get-ADUser -filter * -SearchBase "OU=Students,OU=Users and Computers,$DomainName" -Properties EmployeeID | Where-Object{$_.distinguishedname -notmatch 'OU=Disabled'} |
+$IDS = Import-CSV -Path "C:\Scripts\Accounts\Teachers.csv" | Select-object -ExpandProperty TeacherI
+Get-ADUser -filter * -SearchBase "OU=Teachers,OU=Users and Computers,$DomainName" -Properties EmployeeID | Where-Object{$_.distinguishedname -notmatch 'OU=Disabled'} |
 	Where-Object{$_.EmployeeID -and ($IDS -notcontains $_.EmployeeID)} | Disable-ADAccount
 
-#Find all disable=Users and Computers and move to the disabled OU
-Search-ADAccount -AccountDisabled -UsersOnly -SearchBase "OU=Students,OU=Users and Computers,$DomainName" | Where-Object {$_.distinguishedname -notmatch 'OU=Disabled'} |
-Move-ADObject -TargetPath "OU=Disabled,OU=Students,OU=Users and Computers,$DomainName"
+#Find all disabled Users and move to the disabled OU
+Search-ADAccount -AccountDisabled -UsersOnly -SearchBase "OU=Teachers,OU=Users and Computers,$DomainName" | Where-Object {$_.distinguishedname -notmatch 'OU=Disabled'} |
+Move-ADObject -TargetPath "OU=Disabled,OU=Teachers,OU=Users and Computers,$DomainName"
