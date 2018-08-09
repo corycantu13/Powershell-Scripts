@@ -1,3 +1,4 @@
+#Automated Student Account Creation Script#
 # Globals
 $DomainEmail="@springfield-schools.org"
 $DomainName="DC=SLSD,DC=local"
